@@ -1,0 +1,15 @@
+{
+    "ports": [
+        {
+            "port": 3389,
+            "protocol": "TCP",
+            "process": "svchost.exe"
+        }
+    ],
+    "software": [
+        {
+            "name": "Chrome",
+            "version": "..."
+        }
+    ]
+}
