@@ -158,7 +158,7 @@ const App: React.FC = () => {
         </div>
       )}
       {/* Sidebar */}
-      <nav className="w-64 border-r border-slate-800 bg-slate-900/50 flex flex-col fixed h-screen z-20">
+      <nav className="w-64 border-r border-slate-800 bg-slate-900/50 flex flex-col">
         <div className="p-8">
           <div className="flex items-center gap-3 text-indigo-400 mb-10">
             <div className="bg-indigo-600/20 p-2.5 rounded-2xl ring-1 ring-indigo-500/30">
@@ -195,7 +195,7 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 ml-64 overflow-auto">
+      <main className="flex-1 overflow-y-auto">
         <header className="h-20 border-b border-slate-800 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-10 px-10 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-200 capitalize tracking-tight">{activeTab}</h2>
           <div className="flex items-center gap-6">

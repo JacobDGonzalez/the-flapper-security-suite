@@ -1,16 +1,30 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { EducationalContent } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Use Vite env var (works in browser build)
+const ai = new GoogleGenAI({
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY,
+});
 
-export const getSecurityExplanation = async (topic: string): Promise<EducationalContent> => {
+export const getSecurityExplanation = async (
+  topic: string
+): Promise<EducationalContent> => {
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
-      contents: `Explain the security risks associated with "${topic}" for a desktop computer. 
-      Specifically discuss how tools like Flipper Zero or BadUSB might exploit this. 
-      Keep it educational but concise.`,
+      // Use a generally available model
+      model: "gemini-2.0-flash",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `Explain the security risks associated with "${topic}" for a desktop computer.
+Specifically discuss how tools like Flipper Zero or BadUSB might exploit this.
+Keep it educational but concise.`,
+            },
+          ],
+        },
+      ],
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -26,14 +40,14 @@ export const getSecurityExplanation = async (topic: string): Promise<Educational
       },
     });
 
-    return JSON.parse(response.text || '{}') as EducationalContent;
+    return JSON.parse(response.text || "{}") as EducationalContent;
   } catch (error) {
     console.error("Gemini Education Failed:", error);
     return {
       title: topic,
       summary: "Security explanation unavailable offline.",
       technicalDetails: "Error connecting to security intelligence database.",
-      remediationSteps: "Manually review system security documentation."
+      remediationSteps: "Manually review system security documentation.",
     };
   }
 };
