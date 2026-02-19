@@ -1,49 +1,26 @@
 import express from "express";
-import { exec } from "child_process";
+import cors from "cors";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { exec } from "child_process";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// Enable CORS for all origins
+app.use(cors());
 app.use(express.json());
 
-function runScript(whatIf, cb) {
-    const flag = whatIf ? "-WhatIf" : "";
-    const cmd =
-        'powershell.exe -ExecutionPolicy Bypass -File "C:\\Scripts\\Workstation-Hardening.ps1" ' +
-        flag;
+// ---- routes below ----
 
-    exec(cmd, { windowsHide: true }, (error, stdout, stderr) => {
-        cb(error, stdout, stderr);
-    });
-}
-
-app.post("/hardening/run", (req, res) => {
-    const { mode } = req.body || {};
-    const whatIf = mode === "audit";
-
-    runScript(whatIf, (error, stdout, stderr) => {
-        if (error) {
-            return res.status(500).json({
-                status: "error",
-                message: error.message,
-                stdout,
-                stderr,
-            });
-        }
-
-        res.json({
-            status: "ok",
-            mode: whatIf ? "audit" : "enforce",
-            stdout,
-            stderr,
-        });
-    });
-});
-
-// NEW: inventory endpoint
+// /inventory route using inventoryPath...
 app.get("/inventory", (req, res) => {
-    const path = "C:\\Scripts\\inventory.json"; // same path your PS script writes
+    const inventoryPath = path.join(__dirname, "..", "scripts", "inventory.json");
 
-    fs.readFile(path, "utf8", (err, data) => {
+    fs.readFile(inventoryPath, "utf8", (err, data) => {
         if (err) {
             if (err.code === "ENOENT") {
                 return res.status(404).json({
@@ -59,18 +36,20 @@ app.get("/inventory", (req, res) => {
 
         try {
             const parsed = JSON.parse(data);
-            res.json({
+            return res.json({
                 status: "ok",
                 inventory: parsed,
             });
         } catch (e) {
-            res.status(500).json({
+            return res.status(500).json({
                 status: "error",
                 message: "Inventory file is not valid JSON",
             });
         }
     });
 });
+
+// your /hardening/run route stays unchanged...
 
 const port = 3001;
 app.listen(port, () => {

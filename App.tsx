@@ -74,11 +74,14 @@ const App: React.FC = () => {
   async function runHardening(mode: "audit" | "enforce") {
     try {
       setIsRunning(true);
-      const res = await fetch("http://localhost:3001/hardening/run", {
+      const baseUrl = window.location.origin; // e.g. http://192.168.8.12:3000
+
+      const res = await fetch(`${baseUrl.replace(':3000', ':3001')}/hardening/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode }),
       });
+
       const data = await res.json();
       if (!res.ok || data.status !== "ok") {
         throw new Error(data.message || "Hardening run failed");
@@ -97,7 +100,11 @@ const App: React.FC = () => {
   useEffect(() => {
     async function loadInventory() {
       try {
-        const res = await fetch("http://localhost:3001/inventory");
+        const baseUrl = window.location.origin;          // e.g. http://192.168.8.12:3000
+        const apiUrl = baseUrl.replace(":3000", ":3001"); // backend on 3001
+
+        const res = await fetch(`${apiUrl}/inventory`);
+
         const data = await res.json();
         if (data.status === "ok" && data.inventory?.ports) {
           // if you have services state based on ports, set it here
@@ -369,8 +376,19 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'academy' && (
+          {activeTab === "academy" && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto space-y-8">
+              <header className="flex items-center justify-between mb-6">
+                <button
+                  onClick={() => setActiveTab("dashboard")}
+                  className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-2"
+                >
+                  <span className="border border-slate-700 rounded px-2 py-0.5">←</span>
+                  Back to Security Hub
+                </button>
+                {/* you can keep a small label or version badge here if you want */}
+              </header>
+
               {!selectedTopic && !loadingAI ? (
                 <div className="py-20 text-center">
                   <div className="flex justify-center mb-6">
@@ -379,6 +397,8 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <h3 className="text-3xl font-black mb-4">The Flapper Academy</h3>
+                  {/* ...rest of Academy content... */}
+
                   <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto">
                     Knowledge is the strongest firewall. Select any system mitigation or exposed port to understand how hardware exploits like Flipper Zero work.
                   </p>

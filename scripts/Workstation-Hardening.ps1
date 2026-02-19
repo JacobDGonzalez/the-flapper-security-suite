@@ -1,3 +1,11 @@
+# Require elevation
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
+    ).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+
+    Write-Error "This hardening script must be run as Administrator."
+    exit 1
+}
+
 param(
     [switch]$WhatIf,
     [string]$LogPath = "\\192.168.8.11\SecurityLogs\Hardening\${env:COMPUTERNAME}.log"
@@ -28,7 +36,7 @@ function Write-Log {
     "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding UTF8
 }
 
-function Require-Admin {
+function Assert-Admin {
     $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -38,7 +46,7 @@ function Require-Admin {
     }
 }
 
-Require-Admin
+Assert-Admin
 Write-Log "===== Hardening run started. WhatIf=$($WhatIf.IsPresent) ====="
 
 function Set-Smbv1Disabled {
