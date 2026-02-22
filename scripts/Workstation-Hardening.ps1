@@ -1,19 +1,6 @@
-# Require elevation
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()
-    ).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-
-    Write-Error "This hardening script must be run as Administrator."
-    exit 1
-}
-
 param(
     [switch]$WhatIf,
     [string]$LogPath = "\\192.168.8.11\SecurityLogs\Hardening\${env:COMPUTERNAME}.log"
-)
-
-param(
-    [switch]$WhatIf,      # Audit only, no changes
-    [string]$LogPath = "C:\ProgramData\WorkstationHardening\hardening.log"
 )
 
 Get-NetTCPConnection -State Listen |
@@ -36,7 +23,7 @@ function Write-Log {
     "$timestamp`t$Message" | Out-File -FilePath $LogPath -Append -Encoding UTF8
 }
 
-function Assert-Admin {
+function Require-Admin {
     $currentUser = [Security.Principal.WindowsIdentity]::GetCurrent()
     $principal = New-Object Security.Principal.WindowsPrincipal($currentUser)
     if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -46,7 +33,7 @@ function Assert-Admin {
     }
 }
 
-Assert-Admin
+Require-Admin
 Write-Log "===== Hardening run started. WhatIf=$($WhatIf.IsPresent) ====="
 
 function Set-Smbv1Disabled {

@@ -376,19 +376,8 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {activeTab === "academy" && (
+          {activeTab === 'academy' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-4xl mx-auto space-y-8">
-              <header className="flex items-center justify-between mb-6">
-                <button
-                  onClick={() => setActiveTab("dashboard")}
-                  className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-2"
-                >
-                  <span className="border border-slate-700 rounded px-2 py-0.5">←</span>
-                  Back to Security Hub
-                </button>
-                {/* you can keep a small label or version badge here if you want */}
-              </header>
-
               {!selectedTopic && !loadingAI ? (
                 <div className="py-20 text-center">
                   <div className="flex justify-center mb-6">
@@ -397,8 +386,6 @@ const App: React.FC = () => {
                     </div>
                   </div>
                   <h3 className="text-3xl font-black mb-4">The Flapper Academy</h3>
-                  {/* ...rest of Academy content... */}
-
                   <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto">
                     Knowledge is the strongest firewall. Select any system mitigation or exposed port to understand how hardware exploits like Flipper Zero work.
                   </p>
