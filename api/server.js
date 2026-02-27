@@ -3,20 +3,16 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { exec } from "child_process";
+import { execFile } from "child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-
-// Enable CORS for all origins
 app.use(cors());
 app.use(express.json());
 
-// ---- routes below ----
-
-// /inventory route using inventoryPath...
+// GET /inventory
 app.get("/inventory", (req, res) => {
     const inventoryPath = path.join(__dirname, "..", "scripts", "inventory.json");
 
@@ -28,6 +24,7 @@ app.get("/inventory", (req, res) => {
                     message: "Inventory file not found",
                 });
             }
+
             return res.status(500).json({
                 status: "error",
                 message: "Failed to read inventory file",
@@ -49,7 +46,34 @@ app.get("/inventory", (req, res) => {
     });
 });
 
-// your /hardening/run route stays unchanged...
+app.get("/", (req, res) => {
+    res.json({ status: "ok", service: "Hardening API" });
+});
+
+
+app.post("/run-hardening", (req, res) => {
+    const mode = req.body.mode || "audit";
+    const whatIfFlag = mode === "audit" ? "-WhatIf:$true" : "-WhatIf:$false";
+
+    const args = [
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-File", "C:\\Scripts\\Workstation-Hardening.ps1",
+        whatIfFlag,
+    ];
+
+    execFile("powershell.exe", args, { windowsHide: true }, (error, stdout, stderr) => {
+        console.log("HARDENING ARGS:", args.join(" "));
+        console.log("HARDENING STDOUT:", stdout);
+        console.log("HARDENING STDERR:", stderr);
+
+        if (error) {
+            console.error("Hardening error:", error);
+            return res.status(500).json({ ok: false, error: stderr || error.message });
+        }
+        res.json({ ok: true });
+    });
+});
 
 const port = 3001;
 app.listen(port, () => {

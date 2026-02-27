@@ -28,9 +28,7 @@ import { getSecurityExplanation } from './services/geminiService';
 type Alert = {
   type: "success" | "error";
   message: string;
-}
-
-
+};
 
 const MITIGATIONS: HardeningMitigation[] = [
   { id: 'smb1', name: 'Disable SMBv1', description: 'Legacy protocol vulnerable to EternalBlue and Wannacry.', category: 'Services', target: 'Registry/FS', riskLevel: 'CRITICAL', isApplied: false },
@@ -70,50 +68,53 @@ const App: React.FC = () => {
     }].slice(-50));
   };
 
-  // helper
   async function runHardening(mode: "audit" | "enforce") {
+    console.log("runHardening called with mode:", mode);
     try {
       setIsRunning(true);
-      const baseUrl = window.location.origin; // e.g. http://192.168.8.12:3000
 
-      const res = await fetch(`${baseUrl.replace(':3000', ':3001')}/hardening/run`, {
+      const baseUrl = window.location.origin;
+      const apiUrl = baseUrl.replace(":3000", ":3001");
+
+      const res = await fetch(`${apiUrl}/run-hardening`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode }),
       });
 
-      const data = await res.json();
-      if (!res.ok || data.status !== "ok") {
-        throw new Error(data.message || "Hardening run failed");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("Hardening failed:", err);
+        window.alert("Hardening script failed; check server logs.");
+        return;
       }
-      setLastRunMode(mode);
-      // also push to your audit‑trail log state
-    } catch (e: any) {
-      // set an error alert (see section 2)
-      setAlert({ type: "error", message: e.message || "Hardening run failed" });
+
+      const data = await res.json().catch(() => ({}));
+      console.log("Hardening response:", data);
+      window.alert(
+        mode === "audit"
+          ? "Audit run triggered; check logs on the file server."
+          : "Mitigations applied; check logs on the file server."
+      );
+    } catch (e) {
+      console.error("Network error calling /run-hardening", e);
+      window.alert("Could not reach backend; is server.js running?");
     } finally {
       setIsRunning(false);
     }
   }
 
-
   useEffect(() => {
     async function loadInventory() {
       try {
-        const baseUrl = window.location.origin;          // e.g. http://192.168.8.12:3000
-        const apiUrl = baseUrl.replace(":3000", ":3001"); // backend on 3001
-
+        const baseUrl = window.location.origin;
+        const apiUrl = baseUrl.replace(":3000", ":3001");
         const res = await fetch(`${apiUrl}/inventory`);
-
         const data = await res.json();
         if (data.status === "ok" && data.inventory?.ports) {
-          // if you have services state based on ports, set it here
           // setServices(data.inventory.ports);
         }
-        // you can also store software if you add a state for it
-        // setSoftware(data.inventory.software);
       } catch (e) {
-        // optional: set an alert
         setAlert({
           type: "error",
           message: "Failed to load inventory from API",
@@ -122,7 +123,6 @@ const App: React.FC = () => {
     }
 
     loadInventory();
-
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
@@ -133,7 +133,6 @@ const App: React.FC = () => {
     setIsHardening(true);
     addLog(`Initiating ${isDryRun ? '[DRY RUN] ' : ''}hardening for ${mitigation.name}...`, 'info');
 
-    // Simulate complex system interaction
     await new Promise(r => setTimeout(r, 800));
     addLog(`Checking system dependencies for ${mitigation.target}...`, 'info');
     await new Promise(r => setTimeout(r, 1200));
@@ -158,17 +157,18 @@ const App: React.FC = () => {
   const hardeningProgress = (mitigations.filter(m => m.isApplied).length / mitigations.length) * 100;
 
   return (
-    <div className="min-h-screen flex bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen flex bg-[#13030f] text-slate-100 font-sans selection:bg-purple-500/30">
       {alert && (
         <div className={alert.type === "success" ? "alert-success" : "alert-error"} onClick={() => setAlert(null)}>
           {alert.message}
         </div>
       )}
+
       {/* Sidebar */}
-      <nav className="w-64 border-r border-slate-800 bg-slate-900/50 flex flex-col">
+      <nav className="w-64 border-r border-[#3a1026] bg-[#1b0613]/80 flex flex-col">
         <div className="p-8">
-          <div className="flex items-center gap-3 text-indigo-400 mb-10">
-            <div className="bg-indigo-600/20 p-2.5 rounded-2xl ring-1 ring-indigo-500/30">
+          <div className="flex items-center gap-3 text-purple-300 mb-10">
+            <div className="bg-purple-700/25 p-2.5 rounded-2xl ring-1 ring-purple-500/40">
               <Zap className="w-6 h-6 fill-current" />
             </div>
             <div>
@@ -186,7 +186,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="mt-auto p-6 space-y-4">
-          <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
+          <div className="bg-[#240816]/80 p-4 rounded-xl border border-[#3f1024]">
             <div className="flex items-center justify-between mb-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dry Run Mode</span>
               <button
@@ -203,14 +203,14 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto">
-        <header className="h-20 border-b border-slate-800 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-10 px-10 flex items-center justify-between">
+        <header className="h-20 border-b border-[#4b1740] bg-[#1b0613]/90 backdrop-blur-xl sticky top-0 z-10 px-10 flex items-center justify-between">
           <h2 className="text-lg font-bold text-slate-200 capitalize tracking-tight">{activeTab}</h2>
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 px-4 py-1.5 bg-slate-900 border border-slate-800 rounded-full">
-              <div className={`w-2 h-2 rounded-full ${hardeningProgress > 70 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`}></div>
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-[#240816]/80 border border-[#3f1024] rounded-full">
+              <div className={`w-2 h-2 rounded-full ${hardeningProgress > 70 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'bg-amber-400'}`}></div>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-tighter">System Stability: Nominal</span>
             </div>
-            <div className="bg-indigo-600/10 text-indigo-400 px-3 py-1 rounded-lg border border-indigo-500/20 text-xs font-bold uppercase tracking-widest">v1.2.0 Stable</div>
+            <div className="bg-purple-700/20 text-purple-200 px-3 py-1 rounded-lg border border-purple-500/40 text-xs font-bold uppercase tracking-widest">v1.2.0 Stable</div>
           </div>
         </header>
 
@@ -228,27 +228,27 @@ const App: React.FC = () => {
                   title="Exposed Ports"
                   value={services.filter(s => s.status === 'OPEN').length}
                   subtitle="Risk profile: Elevated"
-                  accent="text-amber-500"
+                  accent="text-amber-400"
                 />
                 <StatCard
                   title="Session Events"
                   value={logs.length}
                   subtitle="System activity monitored"
-                  accent="text-blue-400"
+                  accent="text-purple-200"
                 />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <section className="bg-slate-900/40 border border-slate-800 rounded-3xl p-8">
+                <section className="bg-[#240816]/80 border border-[#3f1024] rounded-3xl p-8">
                   <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <Wifi className="w-5 h-5 text-indigo-400" />
+                    <Wifi className="w-5 h-5 text-purple-300" />
                     Network Attack Surface
                   </h3>
                   <div className="space-y-4">
                     {services.map((service, i) => (
-                      <div key={i} className="flex items-center justify-between p-4 bg-slate-950/50 rounded-2xl border border-slate-800 hover:border-slate-700 transition-colors">
+                      <div key={i} className="flex items-center justify-between p-4 bg-[#180410] rounded-2xl border border-[#3f1024] hover:border-[#5b1c38] transition-colors">
                         <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${service.status === 'OPEN' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${service.status === 'OPEN' ? 'bg-amber-500/10 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
                             {service.status === 'OPEN' ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
                           </div>
                           <div>
@@ -258,13 +258,13 @@ const App: React.FC = () => {
                         </div>
                         <div className="flex flex-col items-end gap-1">
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${service.risk === 'CRITICAL' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                            service.risk === 'HIGH' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'text-slate-500 border-slate-800'
+                            service.risk === 'HIGH' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'text-slate-500 border-slate-800'
                             }`}>
                             {service.risk}
                           </span>
                           <button
                             onClick={() => loadAcademyContent(`${service.name} exploitation`)}
-                            className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mt-1"
+                            className="text-[10px] font-bold text-purple-200 hover:text-purple-100 flex items-center gap-1 mt-1"
                           >
                             <Info className="w-3 h-3" /> Explore Risk
                           </button>
@@ -274,12 +274,12 @@ const App: React.FC = () => {
                   </div>
                 </section>
 
-                <section className="bg-slate-900/40 border border-slate-800 rounded-3xl p-8 flex flex-col">
+                <section className="bg-[#240816]/80 border border-[#3f1024] rounded-3xl p-8 flex flex-col">
                   <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <Terminal className="w-5 h-5 text-emerald-400" />
                     Hardening Activity
                   </h3>
-                  <div className="flex-1 bg-slate-950 rounded-2xl border border-slate-800 p-6 font-mono text-[11px] overflow-y-auto max-h-[400px]">
+                  <div className="flex-1 bg-[#180410] rounded-2xl border border-[#3f1024] p-6 font-mono text-[11px] overflow-y-auto max-h-[400px]">
                     {logs.length === 0 ? (
                       <div className="text-slate-700 h-full flex items-center justify-center italic">Awaiting hardening sequence initialization...</div>
                     ) : (
@@ -287,9 +287,9 @@ const App: React.FC = () => {
                         {logs.map(log => (
                           <div key={log.id} className="flex gap-3">
                             <span className="text-slate-600">[{log.timestamp}]</span>
-                            <span className={`flex-1 ${log.type === 'success' ? 'text-emerald-500' :
-                              log.type === 'warning' ? 'text-amber-500' :
-                                log.type === 'error' ? 'text-red-500' : 'text-slate-400'
+                            <span className={`flex-1 ${log.type === 'success' ? 'text-emerald-400' :
+                              log.type === 'warning' ? 'text-amber-400' :
+                                log.type === 'error' ? 'text-red-500' : 'text-slate-300'
                               }`}>
                               {log.type === 'success' && '> '}
                               {log.message}
@@ -309,55 +309,65 @@ const App: React.FC = () => {
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 space-y-6">
               <div className="flex justify-between items-end mb-4">
                 <div>
-                  <h3>System Defense Console</h3>
-                  <p>Select mitigations to harden your system configuration.</p>
+                  <h3 className="text-xl font-bold">System Defense Console</h3>
+                  <p className="text-slate-400">Select mitigations to harden your system configuration.</p>
 
                   <section>
                     <div style={{ marginTop: "1rem", display: "flex", gap: "0.5rem" }}>
-                      <button disabled={isRunning} onClick={() => runHardening("audit")}>
+                      <button
+                        disabled={isRunning}
+                        onClick={() => {
+                          console.log("Run Audit button clicked");
+                          runHardening("audit");
+                        }}
+                        className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-600 disabled:bg-purple-900 text-white text-sm font-bold transition-colors"
+                      >
                         {isRunning ? "Running audit..." : "Run Audit"}
                       </button>
-                      <button disabled={isRunning} onClick={() => runHardening("enforce")}>
+                      <button
+                        disabled={isRunning}
+                        onClick={() => {
+                          console.log("Apply Mitigations button clicked");
+                          runHardening("enforce");
+                        }}
+                        className="px-4 py-2 rounded-xl bg-[#7a1436] hover:bg-[#971a45] disabled:bg-[#3f0a1e] text-white text-sm font-bold transition-colors"
+                      >
                         {isRunning ? "Applying..." : "Apply Mitigations"}
                       </button>
                     </div>
-
-                    {/* existing mitigations UI stays here, below the buttons */}
-                    {/* e.g., your list of MITIGATIONS mapped to cards */}
                   </section>
-
                 </div>
                 <div className="text-right">
                   <div className="text-xs text-slate-500 uppercase font-bold tracking-widest mb-1">Session: Elevated</div>
-                  <div className="text-xs text-indigo-400 font-mono">0x7FFD_821_4B</div>
+                  <div className="text-xs text-purple-200 font-mono">0x7FFD_821_4B</div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {mitigations.map((m) => (
-                  <div key={m.id} className={`p-6 rounded-3xl border transition-all duration-300 flex flex-col ${m.isApplied ? 'bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10' : 'bg-slate-900/40 border-slate-800'
+                  <div key={m.id} className={`p-6 rounded-3xl border transition-all duration-300 flex flex-col ${m.isApplied ? 'bg-emerald-500/5 border-emerald-500/30 ring-1 ring-emerald-500/10' : 'bg-[#240816]/80 border-[#3f1024]'
                     }`}>
                     <div className="flex justify-between items-start mb-4">
-                      <div className={`p-3 rounded-2xl ${m.isApplied ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-800 text-slate-400'}`}>
+                      <div className={`p-3 rounded-2xl ${m.isApplied ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#3a1026] text-slate-300'}`}>
                         {m.isApplied ? <ShieldCheck className="w-6 h-6" /> : <ShieldAlert className="w-6 h-6" />}
                       </div>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${m.riskLevel === 'CRITICAL' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                        m.riskLevel === 'HIGH' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'text-slate-500 border-slate-800'
+                        m.riskLevel === 'HIGH' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'text-slate-500 border-slate-800'
                         }`}>
                         {m.riskLevel}
                       </span>
                     </div>
 
                     <h4 className="text-lg font-bold mb-1">{m.name}</h4>
-                    <p className="text-slate-400 text-sm mb-6 leading-relaxed flex-1">{m.description}</p>
+                    <p className="text-slate-300 text-sm mb-6 leading-relaxed flex-1">{m.description}</p>
 
                     <div className="flex items-center gap-3 mt-auto">
                       <button
                         onClick={() => applyHardening(m.id)}
                         disabled={m.isApplied || isHardening}
                         className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${m.isApplied
-                          ? 'bg-emerald-500/20 text-emerald-500 cursor-default'
-                          : isHardening ? 'bg-slate-800 text-slate-500 cursor-wait' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/20'
+                          ? 'bg-emerald-500/20 text-emerald-400 cursor-default'
+                          : isHardening ? 'bg-[#3a1026] text-slate-500 cursor-wait' : 'bg-purple-700 hover:bg-purple-600 text-white shadow-lg shadow-black/40'
                           }`}
                       >
                         {m.isApplied ? <CheckCircle2 className="w-4 h-4" /> : isHardening ? <Cpu className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -365,7 +375,7 @@ const App: React.FC = () => {
                       </button>
                       <button
                         onClick={() => loadAcademyContent(m.name)}
-                        className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors"
+                        className="p-3 bg-[#3a1026] hover:bg-[#5b1c38] text-slate-200 rounded-xl transition-colors"
                       >
                         <BookOpen className="w-5 h-5" />
                       </button>
@@ -381,12 +391,12 @@ const App: React.FC = () => {
               {!selectedTopic && !loadingAI ? (
                 <div className="py-20 text-center">
                   <div className="flex justify-center mb-6">
-                    <div className="bg-indigo-600/10 p-6 rounded-3xl">
-                      <BookOpen className="w-16 h-16 text-indigo-400" />
+                    <div className="bg-purple-700/20 p-6 rounded-3xl">
+                      <BookOpen className="w-16 h-16 text-purple-200" />
                     </div>
                   </div>
                   <h3 className="text-3xl font-black mb-4">The Flapper Academy</h3>
-                  <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto">
+                  <p className="text-slate-300 text-lg mb-8 max-w-xl mx-auto">
                     Knowledge is the strongest firewall. Select any system mitigation or exposed port to understand how hardware exploits like Flipper Zero work.
                   </p>
                   <div className="flex flex-wrap justify-center gap-3">
@@ -394,7 +404,7 @@ const App: React.FC = () => {
                       <button
                         key={tag}
                         onClick={() => loadAcademyContent(tag)}
-                        className="px-6 py-2 bg-slate-900 hover:bg-indigo-600 transition-all border border-slate-800 rounded-full text-sm font-bold"
+                        className="px-6 py-2 bg-[#240816] hover:bg-purple-700 transition-all border border-[#3f1024] rounded-full text-sm font-bold"
                       >
                         Explain {tag}
                       </button>
@@ -403,12 +413,12 @@ const App: React.FC = () => {
                 </div>
               ) : loadingAI ? (
                 <div className="py-20 text-center space-y-4">
-                  <Cpu className="w-12 h-12 text-indigo-400 animate-spin mx-auto" />
-                  <p className="text-indigo-400 font-mono text-sm animate-pulse tracking-widest uppercase">Consulting Flapper Security Intelligence...</p>
+                  <Cpu className="w-12 h-12 text-purple-200 animate-spin mx-auto" />
+                  <p className="text-purple-200 font-mono text-sm animate-pulse tracking-widest uppercase">Consulting Flapper Security Intelligence...</p>
                 </div>
               ) : (
-                <div className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden">
-                  <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-12">
+                <div className="bg-[#240816]/80 border border-[#3f1024] rounded-3xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-[#7a1436] to-purple-700 p-12">
                     <button
                       onClick={() => setSelectedTopic(null)}
                       className="text-white/70 hover:text-white text-xs font-bold mb-6 flex items-center gap-2"
@@ -419,24 +429,24 @@ const App: React.FC = () => {
                   </div>
                   <div className="p-12 space-y-10">
                     <section>
-                      <h4 className="text-indigo-400 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
+                      <h4 className="text-purple-200 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
                         <Info className="w-4 h-4" /> Overview
                       </h4>
-                      <p className="text-slate-200 text-lg leading-relaxed">{selectedTopic?.summary}</p>
+                      <p className="text-slate-100 text-lg leading-relaxed">{selectedTopic?.summary}</p>
                     </section>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                       <section>
-                        <h4 className="text-indigo-400 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
+                        <h4 className="text-purple-200 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
                           <Terminal className="w-4 h-4" /> Technical Mechanism
                         </h4>
-                        <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-line">{selectedTopic?.technicalDetails}</p>
+                        <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">{selectedTopic?.technicalDetails}</p>
                       </section>
                       <section>
                         <h4 className="text-emerald-400 font-bold uppercase tracking-widest text-xs mb-4 flex items-center gap-2">
                           <ShieldCheck className="w-4 h-4" /> Recommended Defense
                         </h4>
-                        <div className="bg-slate-950 p-6 rounded-2xl border border-emerald-500/20 text-emerald-100 text-sm leading-relaxed italic">
+                        <div className="bg-[#180410] p-6 rounded-2xl border border-emerald-500/20 text-emerald-100 text-sm leading-relaxed italic">
                           {selectedTopic?.remediationSteps}
                         </div>
                       </section>
@@ -453,15 +463,15 @@ const App: React.FC = () => {
                 <h3 className="text-2xl font-black tracking-tight">Audit Trail</h3>
                 <button onClick={() => setLogs([])} className="text-xs font-bold text-slate-500 hover:text-red-400 transition-colors uppercase tracking-widest">Clear Database</button>
               </div>
-              <div className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden divide-y divide-slate-800">
+              <div className="bg-[#240816]/80 border border-[#3f1024] rounded-3xl overflow-hidden divide-y divide-[#3f1024]">
                 {logs.length === 0 ? (
                   <div className="py-20 text-center text-slate-500 italic">No logs currently in buffer</div>
                 ) : (
                   logs.map(log => (
-                    <div key={log.id} className="p-6 flex items-start gap-4 hover:bg-slate-800/20 transition-colors group">
-                      <div className={`mt-1 p-2 rounded-lg ${log.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' :
-                        log.type === 'warning' ? 'bg-amber-500/10 text-amber-500' :
-                          log.type === 'error' ? 'bg-red-500/10 text-red-500' : 'bg-slate-800 text-slate-400'
+                    <div key={log.id} className="p-6 flex items-start gap-4 hover:bg-[#3a1026]/60 transition-colors group">
+                      <div className={`mt-1 p-2 rounded-lg ${log.type === 'success' ? 'bg-emerald-500/10 text-emerald-400' :
+                        log.type === 'warning' ? 'bg-amber-500/10 text-amber-400' :
+                          log.type === 'error' ? 'bg-red-500/10 text-red-500' : 'bg-[#3a1026] text-slate-300'
                         }`}>
                         {log.type === 'success' ? <CheckCircle2 className="w-4 h-4" /> :
                           log.type === 'warning' ? <AlertCircle className="w-4 h-4" /> :
@@ -470,11 +480,11 @@ const App: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-1">
                           <span className="text-xs font-mono text-slate-600">{log.timestamp}</span>
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${log.type === 'success' ? 'text-emerald-500' :
-                            log.type === 'warning' ? 'text-amber-500' : 'text-slate-500'
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${log.type === 'success' ? 'text-emerald-400' :
+                            log.type === 'warning' ? 'text-amber-400' : 'text-slate-500'
                             }`}>{log.type}</span>
                         </div>
-                        <p className="text-slate-200 font-medium leading-relaxed">{log.message}</p>
+                        <p className="text-slate-100 font-medium leading-relaxed">{log.message}</p>
                       </div>
                     </div>
                   )).reverse()
@@ -488,11 +498,10 @@ const App: React.FC = () => {
   );
 };
 
-// Nav Item Helper
 const NavItem: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string }> = ({ active, onClick, icon, label }) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all ${active ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/40 ring-1 ring-indigo-500' : 'text-slate-500 hover:text-slate-200 hover:bg-slate-800/40'
+    className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all ${active ? 'bg-purple-700 text-white shadow-xl shadow-black/40 ring-1 ring-purple-500' : 'text-slate-500 hover:text-slate-200 hover:bg-[#240816]/60'
       }`}
   >
     {icon}
@@ -500,15 +509,14 @@ const NavItem: React.FC<{ active: boolean; onClick: () => void; icon: React.Reac
   </button>
 );
 
-// Stat Card Helper
 const StatCard: React.FC<{ title: string; value: string | number; subtitle: string; icon?: React.ReactNode; accent?: string; progress?: number }> = ({ title, value, subtitle, icon, accent = "text-white", progress }) => (
-  <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-3xl hover:border-slate-700 transition-all group overflow-hidden relative">
+  <div className="bg-[#240816]/80 border border-[#3f1024] p-8 rounded-3xl hover:border-[#5b1c38] transition-all group overflow-hidden relative">
     {progress !== undefined && (
-      <div className="absolute bottom-0 left-0 h-1 bg-indigo-600 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+      <div className="absolute bottom-0 left-0 h-1 bg-purple-600 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
     )}
     <div className="flex justify-between items-start mb-6">
       <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{title}</span>
-      {icon && <div className="p-2 bg-slate-800/80 rounded-xl group-hover:scale-110 transition-transform">{icon}</div>}
+      {icon && <div className="p-2 bg-[#3a1026]/80 rounded-xl group-hover:scale-110 transition-transform">{icon}</div>}
     </div>
     <div className={`text-4xl font-black mb-1 ${accent} tracking-tighter`}>{value}</div>
     <div className="text-xs text-slate-500 font-medium">{subtitle}</div>

@@ -33,8 +33,14 @@ function Require-Admin {
     }
 }
 
+# Local canary log to prove the script ran at all
+$LocalTestLog = "C:\Scripts\hardening-canary.log"
+"[$(Get-Date)] Script reached main entry point. WhatIf=$($WhatIf.IsPresent)" |
+Out-File -FilePath $LocalTestLog -Append -Encoding UTF8
+
 Require-Admin
 Write-Log "===== Hardening run started. WhatIf=$($WhatIf.IsPresent) ====="
+
 
 function Set-Smbv1Disabled {
     Write-Log "Checking SMBv1 state..."
