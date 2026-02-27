@@ -6,7 +6,6 @@ param(
 Get-NetTCPConnection -State Listen |
 Select-Object LocalPort, LocalAddress, OwningProcess |
 ConvertTo-Json
-``` [1][2]
 
 
 # Ensure log directory
@@ -34,6 +33,7 @@ function Require-Admin {
 }
 
 # Local canary log to prove the script ran at all
+New-Item -ItemType Directory -Force -Path "" | Out-Null
 $LocalTestLog = "C:\Scripts\hardening-canary.log"
 "[$(Get-Date)] Script reached main entry point. WhatIf=$($WhatIf.IsPresent)" |
 Out-File -FilePath $LocalTestLog -Append -Encoding UTF8

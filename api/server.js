@@ -59,7 +59,7 @@ app.post("/run-hardening", (req, res) => {
         "-NoProfile",
         "-ExecutionPolicy", "Bypass",
         "-File", "C:\\Scripts\\Workstation-Hardening.ps1",
-        whatIfFlag,
+        "-WhatIf",
     ];
 
     execFile("powershell.exe", args, { windowsHide: true }, (error, stdout, stderr) => {
